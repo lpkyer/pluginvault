@@ -1,5 +1,6 @@
 use crate::plugin::{Plugin, PluginArch, PluginFormat};
 use rusqlite::{params, Connection, Result};
+use std::collections::HashSet;
 use std::sync::Mutex;
 
 pub struct Database {
@@ -89,7 +90,10 @@ impl Database {
 
                 let format = match format_str.as_str() {
                     "AU" => PluginFormat::AudioUnit,
+                    "VST2" => PluginFormat::Vst2,
                     "VST3" => PluginFormat::Vst3,
+                    "AAX" => PluginFormat::Aax,
+                    "CLAP" => PluginFormat::Clap,
                     _ => PluginFormat::Vst3,
                 };
 
@@ -133,6 +137,17 @@ impl Database {
         Ok(())
     }
 
+    pub fn remove_stale_plugins(&self, scanned: &[Plugin]) -> Result<()> {
+        let valid: HashSet<&str> = scanned.iter().map(|p| p.path.as_str()).collect();
+        let all = self.get_all_plugins()?;
+        for plugin in &all {
+            if !valid.contains(plugin.path.as_str()) {
+                self.delete_plugin(&plugin.id)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn get_plugin(&self, id: &str) -> Result<Option<Plugin>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
@@ -147,7 +162,10 @@ impl Database {
 
             let format = match format_str.as_str() {
                 "AU" => PluginFormat::AudioUnit,
+                "VST2" => PluginFormat::Vst2,
                 "VST3" => PluginFormat::Vst3,
+                "AAX" => PluginFormat::Aax,
+                "CLAP" => PluginFormat::Clap,
                 _ => PluginFormat::Vst3,
             };
 
@@ -173,5 +191,86 @@ impl Database {
         } else {
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_db() -> Database {
+        let conn = Connection::open_in_memory().unwrap();
+        let db = Database { conn: Mutex::new(conn) };
+        db.init().unwrap();
+        db
+    }
+
+    fn make_plugin(id: &str, path: &str) -> Plugin {
+        Plugin {
+            id: id.to_string(),
+            name: id.to_string(),
+            vendor: "Test".to_string(),
+            version: "1.0".to_string(),
+            format: PluginFormat::Vst3,
+            path: path.to_string(),
+            bundle_id: id.to_string(),
+            arch: PluginArch::Universal,
+            size_bytes: 1024,
+            enabled: true,
+        }
+    }
+
+    #[test]
+    fn test_remove_stale_removes_deleted_plugins() {
+        let db = test_db();
+
+        let p1 = make_plugin("com.test.one", "/path/to/one.vst3");
+        let p2 = make_plugin("com.test.two", "/path/to/two.vst3");
+        db.upsert_plugins(&[p1, p2]).unwrap();
+
+        assert_eq!(db.get_all_plugins().unwrap().len(), 2);
+
+        // Only p1 was found during scan — p2 should be removed
+        let scanned = vec![make_plugin("com.test.one", "/path/to/one.vst3")];
+        db.remove_stale_plugins(&scanned).unwrap();
+
+        let remaining = db.get_all_plugins().unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, "com.test.one");
+    }
+
+    #[test]
+    fn test_remove_stale_keeps_existing_plugins() {
+        let db = test_db();
+
+        let p1 = make_plugin("com.test.one", "/path/to/one.vst3");
+        let p2 = make_plugin("com.test.two", "/path/to/two.vst3");
+        db.upsert_plugins(&[p1.clone(), p2.clone()]).unwrap();
+
+        let scanned = vec![p1, p2];
+        db.remove_stale_plugins(&scanned).unwrap();
+
+        assert_eq!(db.get_all_plugins().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_remove_stale_handles_moved_plugin() {
+        let db = test_db();
+
+        // Simulate the real scan flow: upsert first, then remove stale
+        let old = make_plugin("com.test.one", "/old/path/one.vst3");
+        db.upsert_plugins(&[old]).unwrap();
+        assert_eq!(db.get_all_plugins().unwrap().len(), 1);
+
+        // Scan finds it at new path with same id
+        let scanned = vec![make_plugin("com.test.one", "/new/path/one.vst3")];
+
+        // Same order as lib.rs: upsert then remove stale
+        db.upsert_plugins(&scanned).unwrap();
+        db.remove_stale_plugins(&scanned).unwrap();
+
+        let remaining = db.get_all_plugins().unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].path, "/new/path/one.vst3");
     }
 }

@@ -5,7 +5,10 @@ import { togglePlugin, deletePlugin } from "../commands";
 
   const formatLabels: Record<string, string> = {
     AudioUnit: "AU",
+    Vst2: "VST2",
     Vst3: "VST3",
+    Aax: "AAX",
+    Clap: "CLAP",
   };
 
   const archIcons: Record<string, string> = {
@@ -313,6 +316,21 @@ import { togglePlugin, deletePlugin } from "../commands";
 
   .badge-vst3 {
     background: #7c3aed;
+    color: #fff;
+  }
+
+  .badge-vst2 {
+    background: #0891b2;
+    color: #fff;
+  }
+
+  .badge-aax {
+    background: #b91c1c;
+    color: #fff;
+  }
+
+  .badge-clap {
+    background: #15803d;
     color: #fff;
   }
 

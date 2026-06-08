@@ -3,22 +3,20 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginFormat {
     AudioUnit,
+    Vst2,
     Vst3,
+    Aax,
+    Clap,
 }
 
 impl PluginFormat {
-    #[allow(dead_code)]
-    pub fn extension(&self) -> &str {
-        match self {
-            PluginFormat::AudioUnit => "component",
-            PluginFormat::Vst3 => "vst3",
-        }
-    }
-
     pub fn label(&self) -> &str {
         match self {
             PluginFormat::AudioUnit => "AU",
+            PluginFormat::Vst2 => "VST2",
             PluginFormat::Vst3 => "VST3",
+            PluginFormat::Aax => "AAX",
+            PluginFormat::Clap => "CLAP",
         }
     }
 }

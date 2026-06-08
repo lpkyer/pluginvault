@@ -6,7 +6,10 @@ use walkdir::WalkDir;
 
 const SCAN_PATHS: &[&str] = &[
     "/Library/Audio/Plug-Ins/Components",
+    "/Library/Audio/Plug-Ins/VST",
     "/Library/Audio/Plug-Ins/VST3",
+    "/Library/Audio/Plug-Ins/CLAP",
+    "/Library/Application Support/Avid/Audio/Plug-Ins",
 ];
 
 fn user_library() -> Option<String> {
@@ -21,7 +24,9 @@ pub fn get_scan_directories() -> Vec<String> {
     let mut dirs: Vec<String> = SCAN_PATHS.iter().map(|s| s.to_string()).collect();
     if let Some(user_lib) = user_library() {
         dirs.push(format!("{}/Components", user_lib));
+        dirs.push(format!("{}/VST", user_lib));
         dirs.push(format!("{}/VST3", user_lib));
+        dirs.push(format!("{}/CLAP", user_lib));
     }
     dirs
 }
@@ -123,18 +128,26 @@ pub fn scan_plugins() -> Vec<Plugin> {
     let mut plugins = Vec::new();
 
     for dir in &directories {
-        let path = Path::new(dir);
-        if !path.exists() {
+        let dir_path = Path::new(dir);
+        if !dir_path.exists() {
             continue;
         }
 
-        let format = if dir.contains("Components") {
-            PluginFormat::AudioUnit
+        let (format, extensions) = if dir.contains("Components") {
+            (PluginFormat::AudioUnit, &["component"][..])
+        } else if dir.contains("/VST3") || dir.ends_with("VST3") {
+            (PluginFormat::Vst3, &["vst3"][..])
+        } else if dir.contains("/VST") || dir.ends_with("VST") {
+            (PluginFormat::Vst2, &["vst"][..])
+        } else if dir.contains("/CLAP") || dir.ends_with("CLAP") {
+            (PluginFormat::Clap, &["clap"][..])
+        } else if dir.contains("Avid") || dir.contains("AAX") {
+            (PluginFormat::Aax, &["aaxplugin"][..])
         } else {
-            PluginFormat::Vst3
+            continue;
         };
 
-        let entries = match fs::read_dir(path) {
+        let entries = match fs::read_dir(dir_path) {
             Ok(e) => e,
             Err(_) => continue,
         };
@@ -151,14 +164,13 @@ pub fn scan_plugins() -> Vec<Plugin> {
                 continue;
             }
 
-            let is_component = path_str.ends_with(".component")
-                || path_str.ends_with(".component.disabled");
-            let is_vst3 = path_str.ends_with(".vst3") || path_str.ends_with(".vst3.disabled");
+            let matches = extensions.iter().any(|ext| {
+                path_str.ends_with(&format!(".{}", ext))
+                    || path_str.ends_with(&format!(".{}.disabled", ext))
+            });
 
-            match format {
-                PluginFormat::AudioUnit if is_component => {}
-                PluginFormat::Vst3 if is_vst3 => {}
-                _ => continue,
+            if !matches {
+                continue;
             }
 
             if let Some(plugin) = scan_bundle(&path_str, format.clone()) {

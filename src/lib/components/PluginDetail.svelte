@@ -5,7 +5,10 @@
 
   const formatLabels: Record<string, string> = {
     AudioUnit: "Audio Unit (AU)",
+    Vst2: "VST2",
     Vst3: "VST3",
+    Aax: "AAX",
+    Clap: "CLAP",
   };
 
   function formatSize(bytes: number): string {
@@ -78,7 +81,7 @@
 
       <div class="field">
         <span class="field-label">Format</span>
-        <div class="field-value">{$selectedPlugin.format === "AudioUnit" ? "Audio Unit (AU)" : "VST3"}</div>
+        <div class="field-value">{formatLabels[$selectedPlugin.format] || $selectedPlugin.format}</div>
       </div>
 
       <div class="field">

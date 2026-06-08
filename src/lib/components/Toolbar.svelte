@@ -49,7 +49,10 @@
     <select bind:value={$formatFilter} class="filter-select">
       <option value="all">All Formats</option>
       <option value="AudioUnit">AU</option>
+      <option value="Vst2">VST2</option>
       <option value="Vst3">VST3</option>
+      <option value="Aax">AAX</option>
+      <option value="Clap">CLAP</option>
     </select>
     <select bind:value={$vendorFilter} class="filter-select">
       <option value="all">All Vendors</option>

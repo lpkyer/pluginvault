@@ -1,6 +1,6 @@
 # PluginVault
 
-Audio plugin manager for macOS. Scans, organizes, enables/disables, and deletes VST3 and AU plugins.
+Audio plugin manager for macOS. Scans, organizes, enables/disables, and deletes AU, VST2, VST3, AAX, and CLAP plugins.
 
 ## Stack
 
@@ -36,7 +36,7 @@ pluginvault/
 │       ├── main.rs               # Binary entry point
 │       ├── lib.rs                # Tauri app setup, command handlers, state management
 │       ├── plugin.rs             # Data models: Plugin, PluginFormat, PluginArch
-│       ├── scanner.rs            # Filesystem scanner for AU/VST3 bundles
+│       ├── scanner.rs            # Filesystem scanner for AU/VST2/VST3/AAX/CLAP bundles
 │       ├── arch.rs               # Mach-O fat/thin binary architecture detection
 │       ├── db.rs                 # SQLite persistence (upsert, query, update, delete)
 │       └── operations.rs         # Enable/disable (rename) and delete (osascript admin)
@@ -71,7 +71,7 @@ cd src-tauri && cargo build
 
 | Command | Parameters | Returns | Description |
 |---------|-----------|---------|-------------|
-| `scan_plugins` | none | `Plugin[]` | Scan all standard AU/VST3 directories, parse plists, detect arch, persist to SQLite |
+| `scan_plugins` | none | `Plugin[]` | Scan all standard plugin directories (AU, VST2, VST3, AAX, CLAP), parse plists, detect arch, persist to SQLite |
 | `get_plugins` | none | `Plugin[]` | Load all cached plugins from SQLite |
 | `toggle_plugin` | `id: string, enable: bool` | `bool` | Rename bundle to `.disabled` suffix or back |
 | `delete_plugin` | `id: string` | `void` | Delete plugin from disk via osascript with admin privileges |
@@ -81,18 +81,25 @@ cd src-tauri && cargo build
 
 ### Scan Paths
 - `/Library/Audio/Plug-Ins/Components/` — AU (`.component`)
+- `/Library/Audio/Plug-Ins/VST/` — VST2 (`.vst`)
 - `/Library/Audio/Plug-Ins/VST3/` — VST3 (`.vst3`)
+- `/Library/Audio/Plug-Ins/CLAP/` — CLAP (`.clap`)
+- `/Library/Application Support/Avid/Audio/Plug-Ins/` — AAX (`.aaxplugin`)
 - `~/Library/Audio/Plug-Ins/Components/` — User-level AU
+- `~/Library/Audio/Plug-Ins/VST/` — User-level VST2
 - `~/Library/Audio/Plug-Ins/VST3/` — User-level VST3
+- `~/Library/Audio/Plug-Ins/CLAP/` — User-level CLAP
 
 ### Scan Flow
 1. Walk `WalkDir` over each path
-2. For each `.component`/`.vst3` directory (including `.disabled` variants):
+2. For each plugin bundle directory (including `.disabled` variants):
+   - Match extension to determine format (`.component` → AU, `.vst` → VST2, `.vst3` → VST3, `.aaxplugin` → AAX, `.clap` → CLAP)
    - Parse `Contents/Info.plist` → `CFBundleName`, `CFBundleIdentifier`, `CFBundleShortVersionString`, `NSHumanReadableCopyright`
    - Detect architecture from Mach-O header of main binary → AppleSilicon / Intel / Universal / Unknown
    - Calculate directory size via recursive walk
    - Determine enabled status from filename suffix
 3. Upsert all results into SQLite
+4. **Remove stale entries** — `remove_stale_plugins()` deletes from DB any plugin whose path no longer appears in the scan results (handles Finder deletion, moves)
 
 ### Architecture Detection
 Reads Mach-O header bytes directly (no external deps):
@@ -137,6 +144,7 @@ User clicks Scan
   → scanPlugins() [invoke Rust]
   → scanner::scan_plugins() [filesystem]
   → db.upsert_plugins() [SQLite]
+  → db.remove_stale_plugins() [SQLite — delete entries no longer on disk]
   → Returns Vec<Plugin> to frontend
   → getPlugins() [reload from DB]
   → $plugins store = result
@@ -163,7 +171,7 @@ User clicks delete
 
 ## Tests
 
-10 Rust unit tests in `arch.rs` and `operations.rs`:
+13 Rust unit tests in `arch.rs`, `operations.rs`, and `db.rs`:
 
 ```bash
 cd src-tauri && cargo test
@@ -183,6 +191,11 @@ cd src-tauri && cargo test
 - `test_find_main_binary_with_macos_dir` — bundle with MacOS dir with binary → found
 - `test_find_main_binary_no_plist` — bundle without Info.plist → None
 
+### db tests
+- `test_remove_stale_removes_deleted_plugins` — plugin not in scan results → removed from DB
+- `test_remove_stale_keeps_existing_plugins` — plugin in scan results → kept in DB
+- `test_remove_stale_handles_moved_plugin` — plugin moved to new path, upserted, old path cleaned up
+
 ## Key Design Decisions
 
 | Decision | Choice | Rationale |
@@ -198,7 +211,7 @@ cd src-tauri && cargo test
 
 ## Roadmap (future)
 
-- [ ] Support for CLAP, AAX, VST2 formats
+- [x] Support for CLAP, AAX, VST2 formats
 - [ ] DAW project scanning (Ableton, Logic, Pro Tools)
 - [ ] Update checking (KVR Audio API)
 - [ ] License vault (encrypted local storage)

@@ -12,11 +12,12 @@
 
 ## Français
 
-**PluginVault** est un gestionnaire de plugins audio gratuit et open source pour macOS. Il scanne tous vos plugins AU et VST3, vous permet de les activer/désactiver, de les supprimer et de naviguer votre bibliothèque en un coup d'œil.
+**PluginVault** est un gestionnaire de plugins audio gratuit et open source pour macOS. Il scanne tous vos plugins AU, VST2, VST3, AAX et CLAP, vous permet de les activer/désactiver, de les supprimer et de naviguer votre bibliothèque en un coup d'œil.
 
 ### Fonctionnalités
 
-- **Scan universel** — Détecte automatiquement tous les plugins AU (`.component`) et VST3 (`.vst3`) dans les dossiers système et utilisateur
+- **Scan universel** — Détecte automatiquement AU (`.component`), VST2 (`.vst`), VST3 (`.vst3`), AAX (`.aaxplugin`) et CLAP (`.clap`) dans les dossiers système et utilisateur
+- **Nettoyage automatique** — Les plugins supprimés du Finder disparaissent de la liste au prochain scan
 - **Architecture CPU** — Détecte Apple Silicon, Intel 64, Universal 2 avec des badges couleur
 - **Activer / Désactiver** — Basculez un plugin sans le supprimer (renommage avec suffixe `.disabled`)
 - **Supprimer** — Effacez complètement un plugin du disque avec privilèges administrateur
@@ -61,7 +62,10 @@ npm run tauri build
 | Format | Extension | Dossier |
 |--------|-----------|---------|
 | Audio Unit (AU) | `.component` | `/Library/Audio/Plug-Ins/Components/` |
+| VST2 | `.vst` | `/Library/Audio/Plug-Ins/VST/` |
 | VST3 | `.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| AAX | `.aaxplugin` | `/Library/Application Support/Avid/Audio/Plug-Ins/` |
+| CLAP | `.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
 
 ### Build depuis la source
 
@@ -97,11 +101,12 @@ cd src-tauri && cargo test
 
 ## English
 
-**PluginVault** is a free, open-source audio plugin manager for macOS. It scans all your AU and VST3 plugins, lets you enable/disable them, delete them from disk, and browse your library at a glance.
+**PluginVault** is a free, open-source audio plugin manager for macOS. It scans all your AU, VST2, VST3, AAX, and CLAP plugins, lets you enable/disable them, delete them from disk, and browse your library at a glance.
 
 ### Features
 
-- **Universal scanner** — Automatically detects all AU (`.component`) and VST3 (`.vst3`) plugins from system and user directories
+- **Universal scanner** — Automatically detects AU (`.component`), VST2 (`.vst`), VST3 (`.vst3`), AAX (`.aaxplugin`), and CLAP (`.clap`) from system and user directories
+- **Auto-cleanup** — Plugins deleted from Finder disappear from the list on next scan
 - **CPU architecture** — Detects Apple Silicon, Intel 64, Universal 2 with colour-coded badges
 - **Enable / Disable** — Toggle a plugin without deleting it (renamed with `.disabled` suffix)
 - **Delete** — Permanently remove a plugin from disk using administrator privileges
@@ -146,7 +151,10 @@ npm run tauri build
 | Format | Extension | Location |
 |--------|-----------|----------|
 | Audio Unit (AU) | `.component` | `/Library/Audio/Plug-Ins/Components/` |
+| VST2 | `.vst` | `/Library/Audio/Plug-Ins/VST/` |
 | VST3 | `.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| AAX | `.aaxplugin` | `/Library/Application Support/Avid/Audio/Plug-Ins/` |
+| CLAP | `.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
 
 ### Building from Source
 

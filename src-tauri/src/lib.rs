@@ -24,6 +24,10 @@ async fn scan_plugins(state: State<'_, Mutex<AppState>>) -> Result<Vec<Plugin>, 
         .db
         .upsert_plugins(&plugins)
         .map_err(|e| e.to_string())?;
+    app_state
+        .db
+        .remove_stale_plugins(&plugins)
+        .map_err(|e| e.to_string())?;
     Ok(plugins)
 }
 
