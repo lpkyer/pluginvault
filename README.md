@@ -10,7 +10,7 @@
 
 ---
 
-## 🇨🇦 Français (Canada)
+## Français
 
 **PluginVault** est un gestionnaire de plugins audio gratuit et open source pour macOS. Il scanne tous vos plugins AU et VST3, vous permet de les activer/désactiver, de les supprimer et de naviguer votre bibliothèque en un coup d'œil.
 
@@ -95,7 +95,7 @@ cd src-tauri && cargo test
 
 ---
 
-## 🇨🇦 English (Canada)
+## English
 
 **PluginVault** is a free, open-source audio plugin manager for macOS. It scans all your AU and VST3 plugins, lets you enable/disable them, delete them from disk, and browse your library at a glance.
 
